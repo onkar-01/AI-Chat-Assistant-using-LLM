@@ -1,2 +1,4 @@
 .env
 basic.py
+/venv
+__pycache__/
