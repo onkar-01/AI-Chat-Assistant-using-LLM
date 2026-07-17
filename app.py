@@ -58,26 +58,35 @@ class Aichatapp:
     
     def ask_ai(self,question):
         self.chat_history.append({"role": "user", "content": question})
-        completion = self.client.chat.completions.create(
+        stream = self.client.chat.completions.create(
             model="mimo-v2.5-pro",
             messages=[{"role": "system", "content": self.system_prompt}] + self.chat_history,
             max_completion_tokens=1024,
-            stream=False,
+            stream=True,
             extra_body={
                 "thinking": {"type": "enable"}
             }
         )
-        self.chat_history.append({"role": "assistant", "content": completion.choices[0].message.content})
-        return completion.choices[0].message.content
+        
+        full_response = ""
+        for chunk in stream:
+            if chunk.choices and chunk.choices[0].delta.content is not None:
+                content = chunk.choices[0].delta.content
+                full_response += content
+                yield content
+                
+        self.chat_history.append({"role": "assistant", "content": full_response})
     
     def chat(self):
         while True:
-            question= input("\nuser: ")
-            if question == "exit":
+            question = input("\nuser: ")
+            if question.lower() == "exit":
                 break
             else:
-                ans= self.ask_ai(question)
-                print("Assistant: ",ans)
+                print("Assistant: ", end="", flush=True)
+                for chunk in self.ask_ai(question):
+                    print(chunk, end="", flush=True)
+                print()
 
 chat = Aichatapp()
 chat.chat()
